@@ -18,10 +18,14 @@ To install the project and its dependencies, follow these steps:
    cd <project-directory>
    ```
 
-3. Install the dependencies using npm or yarn:
+3. Install the dependencies using npm:
 
    ```bash
    npm install
+   ```
+
+      ```bash
+   cd ios && pod install
    ```
 
 
