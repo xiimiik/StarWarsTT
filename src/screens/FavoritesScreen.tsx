@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   Button,
   CharacterCard,
+  CounterBox,
   EmptyList,
   Screen,
   Separator,
@@ -19,6 +20,11 @@ export const FavoritesScreen: React.FC<AppTabScreenProps<'FAVORITES'>> = ({
   navigation,
 }) => {
   const [favorites, setFavorites] = useState<ICharacterWithDetails[] | []>([]);
+  const [sexCount, setSexCount] = useState({
+    male: 0,
+    female: 0,
+    other: 0,
+  });
 
   const checkFavorite = useCallback(async () => {
     const favoritesData = await getFavorites();
@@ -67,17 +73,50 @@ export const FavoritesScreen: React.FC<AppTabScreenProps<'FAVORITES'>> = ({
     [favorites],
   );
 
+  const updateSexCount = useCallback(() => {
+    const count = favorites.reduce(
+      (acc, character) => {
+        const gender = character.gender.toLowerCase();
+
+        switch (gender) {
+          case 'male':
+            acc.male += 1;
+            break;
+          case 'female':
+            acc.male += 1;
+            break;
+          default:
+            acc.other += 1;
+        }
+
+        return acc;
+      },
+      { male: 0, female: 0, other: 0 },
+    );
+    setSexCount(count);
+  }, [favorites]);
+
   useFocusEffect(
     useCallback(() => {
       checkFavorite();
     }, []),
   );
 
+  useEffect(() => {
+    updateSexCount();
+  }, [favorites]);
+
   return (
     <Screen>
       <View style={styles.title}>
         <Title title="Favorites" />
         <Button title=" Clear Fans" onPress={clearFavorites} />
+      </View>
+
+      <View style={styles.countersContainer}>
+        <CounterBox title="Female Fans" count={sexCount.female} />
+        <CounterBox title="Male Fans" count={sexCount.male} />
+        <CounterBox title="Other" count={sexCount.other} />
       </View>
 
       <FlatList
@@ -102,5 +141,10 @@ const styles = StyleSheet.create({
   listContentContainer: {
     flexGrow: 1,
     paddingBottom: 20,
+  },
+  countersContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
 });

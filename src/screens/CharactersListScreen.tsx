@@ -1,14 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { fetchAllPersonsWithDetails } from '../api';
 import {
-  Button,
+  fetchAllPersonsWithDetails,
+  fetchSearchAllPersonsWithDetails,
+} from '../api';
+import {
   CharacterCard,
-  CounterBox,
   EmptyList,
   Loader,
   Screen,
@@ -30,15 +36,13 @@ export const CharactersListScreen: React.FC<
   const [people, setPeople] = useState<ISwapiResponse<ICharacterWithDetails>>();
   const [isLoading, setIsLoading] = useState(false);
   const [favorites, setFavorites] = useState<ICharacterWithDetails[] | []>([]);
-  const [sexCount, setSexCount] = useState({
-    male: 0,
-    female: 0,
-    other: 0,
-  });
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const getCharacters = useCallback(async (page: number) => {
+  const getCharacters = useCallback(async (page: number, query: string) => {
     setIsLoading(true);
-    const data = await fetchAllPersonsWithDetails(page);
+    const data = query
+      ? await fetchSearchAllPersonsWithDetails(query, page)
+      : await fetchAllPersonsWithDetails(page);
     setIsLoading(false);
 
     setPeople(data);
@@ -48,38 +52,6 @@ export const CharactersListScreen: React.FC<
     const favoritesData = await getFavorites();
     setFavorites(favoritesData);
   }, []);
-
-  const clearFavorites = useCallback(async () => {
-    try {
-      await AsyncStorage.removeItem('favoriteCharacters');
-      await checkFavorite();
-    } catch (error) {
-      console.error('Error clearing favorites:', error);
-    }
-  }, []);
-
-  const updateSexCount = useCallback(() => {
-    const count = favorites.reduce(
-      (acc, character) => {
-        const gender = character.gender.toLowerCase();
-
-        switch (gender) {
-          case 'male':
-            acc.male += 1;
-            break;
-          case 'female':
-            acc.male += 1;
-            break;
-          default:
-            acc.other += 1;
-        }
-
-        return acc;
-      },
-      { male: 0, female: 0, other: 0 },
-    );
-    setSexCount(count);
-  }, [favorites]);
 
   const handleToggleFavorite = useCallback(
     async (character: ICharacterWithDetails) => {
@@ -115,8 +87,8 @@ export const CharactersListScreen: React.FC<
   );
 
   useEffect(() => {
-    getCharacters(currentPage);
-  }, [currentPage]);
+    getCharacters(currentPage, searchQuery);
+  }, [currentPage, searchQuery]);
 
   useFocusEffect(
     useCallback(() => {
@@ -124,22 +96,21 @@ export const CharactersListScreen: React.FC<
     }, []),
   );
 
-  useEffect(() => {
-    updateSexCount();
-  }, [favorites]);
-
   return (
     <Screen>
       <View style={styles.title}>
         <Title title="Characters" />
-        <Button title=" Clear Fans" onPress={clearFavorites} />
       </View>
 
-      <View style={styles.countersContainer}>
-        <CounterBox title="Female Fans" count={sexCount.female} />
-        <CounterBox title="Male Fans" count={sexCount.male} />
-        <CounterBox title="Other" count={sexCount.other} />
-      </View>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by character name"
+        value={searchQuery}
+        onChangeText={text => {
+          setSearchQuery(text);
+          setCurrentPage(1);
+        }}
+      />
 
       {isLoading ? (
         <Loader />
@@ -171,10 +142,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  countersContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 8,
     marginBottom: 16,
+    backgroundColor: 'white',
   },
   footerListStyles: {
     marginBottom: 32,
